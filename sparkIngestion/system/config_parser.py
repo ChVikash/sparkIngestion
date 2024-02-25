@@ -9,8 +9,9 @@ def parse_config(src_system: str, schema_name: str, table_name: str) -> dict:
     """
     This function parses the json config and returns it as a dictionary.
     @Args:
-        -db_name(str) : The name of the database 
-        -tb_name(str) : The name of the table to be created 
+        -src_system(str) : The name of the source system 
+        -schem_name(str) : The name of the schema to be read 
+        -table_name(str) : The name of the table for which we have to read config
     @Returns:
         -dict_config(dict) : JSON Config parsed as a dictionary
     @Raises: 
