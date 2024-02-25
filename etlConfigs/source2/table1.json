@@ -4,7 +4,7 @@
         "src_database" : "",
         "src_table" : "",
         "src_format" : "", 
-        "path" : "",
+        "src_path" : "",
         "read_max" : "", 
         "read_after_checkpoint" : "", 
         "checkpoint_info" : {},

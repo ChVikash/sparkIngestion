@@ -10,6 +10,15 @@ class IllegalTablePathException(Exception):
 
     def __init__(self, message="Table Path Incorrect"):
         super().__init__(message)
+        
+class IncorrectLocationException(Exception):
+    """
+    Exception raised for errors in the table path.
+    """
+
+    def __init__(self, message="Table Path Incorrect"):
+        super().__init__(message)
+
 
 class ColumnDroppedException(Exception):
     """
