@@ -1,0 +1,42 @@
+{
+    "extracts" : {
+        "src_system" : "",
+        "src_database" : "",
+        "src_table" : "",
+        "src_format" : "", 
+        "path" : "",
+        "read_max" : "", 
+        "read_after_checkpoint" : "", 
+        "checkpoint_info" : {},
+        "returns" : "" 
+    },
+
+    "transforms" : {
+        "standardize_date" : {
+            "func_location" : "",
+            "Column_List" : ["col1", "col2"],
+            "params" : {
+                "dt_src_format": "",
+                "dt_target_format" : ""
+            }
+        },
+        "remove_spaces" : {
+            "func_location" : "",
+            "Column_List" : ["col1", "col2"]
+        } 
+    },
+
+    "loads" : {
+        "tgt_system"  : "",
+        "tgt_catalog" : "", 
+        "tgt_schema"  : "", 
+        "tgt_table"   : "",
+        "tgt_table_type" : "managed", 
+        "tgt_location" : "if_external tgt_table_type",
+        "tgt_format" : "delta, if not provided"
+
+    }
+
+
+
+}
