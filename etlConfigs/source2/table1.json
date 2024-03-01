@@ -1,12 +1,14 @@
 {
     "extracts" : {
-        "src_system" : "",
-        "src_database" : "",
-        "src_table" : "",
+        "src_system" : "source_system",
+        "src_database" : "database",
+        "src_table" : "table_name",
         "src_format" : "", 
         "src_path" : "",
         "read_max" : "", 
+        "deep_clone" : "",
         "read_after_checkpoint" : "", 
+        "read_options" : {},
         "checkpoint_info" : {},
         "returns" : "" 
     },

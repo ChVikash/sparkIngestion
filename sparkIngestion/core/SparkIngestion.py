@@ -8,7 +8,8 @@ from sparkIngestion.core.BaseIngestion import BaseIngestion
 from sparkIngestion.system.custom_exceptions import ColumnAddedException,\
                                        ColumnDroppedException,\
                                        ColumnMismatchException, \
-                                       DbNotFoundException
+                                       DbNotFoundException, \
+                                       IllegalTablePathException
                                     
 
 spark = SparkSession.builder.getOrCreate()
@@ -20,14 +21,85 @@ class SparkIngestionR2B(BaseIngestion):
     used through the class object itself. 
 
     -code_block::python
-        >>from path-to-file.pre_processing improt LWIngestion
+        >>from path-to-file.pre_processing improt SparkIngestionR2B
         >>
     """
+    
+    @classmethod
+    def get_latest_dataframe(cls, src_path:str )-> str :
+        """
+        This function reads the latest files that loaded after the latest loaded file found in ingestion logs for sap bw hana.  
+        @Args : 
+            -table_name(str) : table name as a string
+
+        @Returns: 
+            -file_path(str): most recent file's path that was loaded most recently. 
+        """
+        file_path = dbutils.fs.ls(src_path)
+        if not file_path:
+            raise IllegalTablePathException
+        file_path = [src_path]
+        return file_path
+    
+    
+    @classmethod
+    def get_latest_files(cls, src_path:str )-> str :
+        """
+        This function reads the latest files that loaded after the latest loaded file found in ingestion logs for sap bw hana.  
+        @Args : 
+            -table_name(str) : table name as a string
+
+        @Returns: 
+            -file_path(str): most recent file's path that was loaded most recently. 
+        """
+        files = dbutils.fs.ls(src_path)
+        file_path = [max([file_path.path for file_path in files])]
+        
+        if not file_path:
+            raise IllegalTablePathException
+        return file_path
+    
+    
+    @classmethod
+    def get_latest_files(cls, src_path: str , table_name: str, checkpoint_info: dict )-> List[str] :
+        """
+        This function reads the latest files that loaded after the latest loaded file found in ingestion logs for sap bw hana.  
+        @Args : 
+            -src_path(str) : path of the source
+            -table_name(str) : table name as a string
+
+        @Returns: 
+            -files(List[str]): sorted list of file path(s) of the files that came after the previous loaded files. 
+        """
+        metadata_catalog = checkpoint_info["catalog"]
+        metadata_schema = checkpoint_info["schema"]
+        metadata_table = checkpoint_info["table"]
+        metadata_file_field = checkpoint_info["file_field"]
+        metadata_dbr_table_field = checkpoint_info["table_field"]
+        files = dbutils.fs.ls(src_path)
+        mpf = spark.sql(f'''
+                        SELECT 
+                            max({metadata_file_field}) as mpf
+                        FROM 
+                            {metadata_catalog}.{metadata_schema}.{metadata_table}
+                        WHERE 
+                            {metadata_dbr_table_field} =  "{table_name.upper()}" 
+                        ''')
+        mpf = mpf.filter(mpf["mpf"].isNotNull())
+        if mpf.count() > 0 :
+            mpf.display()
+            mpf = mpf.collect()[0]['mpf']
+        else : 
+            mpf = f"{table_name.lower()}_2023-01-01T01:01:01.1644818Z"
+        files = [file_path.path for file_path in files if file_path.name > mpf ]
+        return files 
+    
+    
     # There can be parsed json objects and load params and extract params are passed separately       
     @classmethod
-    def extract_dataframe(cls, 
-                          database_name : str, 
-                          table_name : str, 
+    def extract_dataframe(cls,
+                          src_format: str, 
+                          src_path: str,
                           params: Optional[Dict[str, str]] = {}
                           ) -> DataFrame:
         """
@@ -44,17 +116,10 @@ class SparkIngestionR2B(BaseIngestion):
         @Raises:
             -Analysis Exception : If the path doesn't exist 
         """
-        #by default delta format is considered 
-        base_path = "BASE_STORAGE_PATH"
-        tbl_path = os.path.join(base_path, database_name, table_name)
-        src_format = params.get("format", "delta")
-
         df = spark.read.format(src_format)
-
         for key,value in params["options"].items() : 
-            df = df.option(key, value)
-        df = spark.read.format(src_format)        
-        df = df.load(tbl_path)
+            df = df.option(key, value)    
+        df = df.load(src_path)
         return df
     
     @classmethod
