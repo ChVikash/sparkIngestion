@@ -13,7 +13,7 @@ from sparkIngestion.system.custom_exceptions import ColumnAddedException,\
 
 spark = SparkSession.builder.getOrCreate()
 
-class SparkIngestion(BaseIngestion):
+class SparkIngestionR2B(BaseIngestion):
     """
     This class contains methods related to Ingestion. All the methods present 
     in this class are decorated with @classemethod decorator. Hence, all these methods can be
@@ -45,7 +45,7 @@ class SparkIngestion(BaseIngestion):
             -Analysis Exception : If the path doesn't exist 
         """
         #by default delta format is considered 
-        base_path = "abfss://raw@corporatelakehousedata.dfs.core.windows.net/saptableraw/"
+        base_path = "BASE_STORAGE_PATH"
         tbl_path = os.path.join(base_path, database_name, table_name)
         src_format = params.get("format", "delta")
 
@@ -78,21 +78,7 @@ class SparkIngestion(BaseIngestion):
         @Returns : 
             -count(int) : it return the count of the final dataframe  
         """
-        schema_str = ""
-        #creating a schema string that represents columns and their datatypes 
-        for key,val in schema : 
-            if  "/" in key : 
-                schema_str += f"`{key}` {val} ,\n"
-            else :
-                schema_str += f"{key} {val} ,\n"
-        schema_str = schema_str[:-2]
-        schema_name = f"cd-sap-{db_name.lower()}-bronze"
-        #creating a SQL string for table creation 
-        sql_str = f"""CREATE TABLE IF NOT EXISTS 
-                    `{schema_name}`.`{db_name}_{tb_name}` \n( {schema_str})"""
-        #executing SQL strings 
-        spark.sql(f"USE CATALOG `{catalog}`")
-        spark.sql(sql_str)
+        #TO-BE IMPLEMENTED 
         return
 
     @classmethod
@@ -167,7 +153,7 @@ class SparkIngestion(BaseIngestion):
         #checking if database already present
         db_exists =spark\
                     .sql('show schemas')\
-                    .filter(F.col('databaseName') == f"cd-sap-{db_name}-bronze").count()
+                    .filter(F.col('databaseName') == f"{schema}").count()
         
         if db_exists == 0:
             raise DbNotFoundException(catalog)
@@ -179,10 +165,10 @@ class SparkIngestion(BaseIngestion):
         if db_name == "default" : 
             schema_name = "default"
         else :
-            schema_name = f"cd-sap-{db_name}-bronze"
+            schema_name = f"{schema}"
         table_exists = spark.sql(f'''show tables 
                                      from 
-                                     `corporate-data-dev`.`{schema_name}`''')\
+                                     `{catalog}`.`{schema_name}`''')\
                                 .filter(F.col('tableName') == f'{db_name}_{tb_name}').count()
         
         
