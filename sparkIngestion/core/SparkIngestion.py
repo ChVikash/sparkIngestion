@@ -124,11 +124,10 @@ class SparkIngestionR2B(BaseIngestion):
     
     @classmethod
     def create_table(cls,
-                     env : str,
                      catalog : str, 
-                     db_name: str, 
-                     tb_name: str, 
-                     schema: List[Tuple[str,str]]
+                     schema_name: str, 
+                     table_name : str,
+                     dtypes: List[Tuple[str,str]]
                      )->int :
         """
         This function creates a table inside the given database of the cataloag 
@@ -143,12 +142,24 @@ class SparkIngestionR2B(BaseIngestion):
         @Returns : 
             -count(int) : it return the count of the final dataframe  
         """
-        #TO-BE IMPLEMENTED 
+        schema_str = ""
+        #creating a schema string that represents columns and their datatypes 
+        for key,val in dtypes : 
+            if  "/" in key : 
+                schema_str += f"`{key}` {val} ,\n"
+            else :
+                schema_str += f"{key} {val} ,\n"
+        schema_str = schema_str[:-2]
+        #creating a SQL string for table creation 
+        sql_str = f"""CREATE TABLE IF NOT EXISTS 
+                    `{schema_name}`.`{table_name}` \n( {schema_str})"""
+        #executing SQL strings 
+        spark.sql(f"USE CATALOG `{catalog}`")
+        spark.sql(sql_str)
         return
 
     @classmethod
     def match_existing_schema(cls, 
-                              env : str,
                               catalog : str, 
                               db_name: str, 
                               tb_name: str, 
@@ -187,12 +198,10 @@ class SparkIngestionR2B(BaseIngestion):
 
     @classmethod
     def write_dataframe(cls, 
-                        env: str, 
                         df: DataFrame, 
-                        schema: List[Tuple[str,str]],
                         catalog : str ,
-                        db_name: str, 
-                        tb_name: str,
+                        schema_name: str, 
+                        table_name: str,
                         params: Optional[Dict[str, str]] = {}
                         ) ->None:
         """
@@ -212,34 +221,9 @@ class SparkIngestionR2B(BaseIngestion):
             -ColumnMismatchException
         """
         spark.sql(f"USE CATALOG `{catalog}`") 
-        mode = params["meta"].get("mode", "Overwrite")
-        format = params["meta"].get("format", "delta")
-
-        #checking if database already present
-        db_exists =spark\
-                    .sql('show schemas')\
-                    .filter(F.col('databaseName') == f"{schema}").count()
-        
-        if db_exists == 0:
-            raise DbNotFoundException(catalog)
-            # cls.create_database(env,db_name.lower())
-
-        # checking if table already exists, If it does the schema of input dataframe is matched
-        # with existing else it uses new df schema to create a new table  
-        # however if OverwriteSchema is given it skips schema checks 
-        if db_name == "default" : 
-            schema_name = "default"
-        else :
-            schema_name = f"{schema}"
-        table_exists = spark.sql(f'''show tables 
-                                     from 
-                                     `{catalog}`.`{schema_name}`''')\
-                                .filter(F.col('tableName') == f'{db_name}_{tb_name}').count()
-        
-        
-        if table_exists == 0 :
-            cls.create_table(env, catalog, db_name, tb_name, schema)
+        format = params["format"]
+        mode = params["mode"]
         df = spark.write.format(format)
         df = df.mode(mode)
-        df.saveAsTable(f"`{catalog}`.`{schema_name}`.{db_name}_{tb_name}")
+        df.saveAsTable(f"`{catalog}`.`{schema_name}`.{table_name}")
         return 
